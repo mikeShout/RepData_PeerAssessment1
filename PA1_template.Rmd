@@ -1,25 +1,143 @@
 ---
 title: "Reproducible Research: Peer Assessment 1"
+author: "Mike Wehinger"
+date: "November 2016"
 output: 
-  html_document:
-    keep_md: true
+      html_document:
+            keep_md: true
 ---
 
+## 1. Loading and processing the data
+The data will be stored in a dataframe called, *activity* and has 17,568 observations from a personal activity monitoring device. 
 
-## Loading and preprocessing the data
+A quick look at the data shows,
+
+* it is comprised of 61 days, 1-Oct to 30-Nov
+* there are 17,568 observations
+* There are 288 observations per day (which matches what you expect from 5-minute intervals over a 24 hour period)
+
+In addition, the *activity* data was transformed to summarize steps by day and by interval, the *dailyStats* and *intervalStats* respectively
+
+```{r loadData, results="hide", warning=FALSE, message=FALSE}
+setwd("C:/Users/Mike/Documents/Projects/dataScience/ReproducibleResearch/RepData_PeerAssessment1")
+library(xtable)
+library(dplyr)
+library(ggplot2)
+```
+
+```{r processData}
+#read data from file to dataframe...
+activity <- read.csv(unz(description = "activity.zip", "activity.csv"))
+
+# transform data to summarize by day and interval...
+dailyStats <- group_by(activity, date) %>% summarize(avgSteps = mean(steps,na.rm=TRUE), medianSteps = median(steps,na.rm=TRUE), totalSteps = sum(steps,na.rm=TRUE))
+
+intervalStats <- group_by(activity, interval) %>% summarize(avgSteps = mean(steps,na.rm=TRUE), medianSteps = median(steps,na.rm=TRUE), totalSteps = sum(steps,na.rm=TRUE))
+
+# Add a time element to the interval transformation to make intervals more intuitive (e.g. time of day)
+timeInterval <- seq(as.POSIXct("2012-11-30 00:00:00"),as.POSIXct("2012-11-30 23:55:00"),by="5 mins")
+intervalStats <- cbind(intervalStats, timeInterval)
+
+head(activity)
+head(dailyStats)
+head(intervalStats)
+```
 
 
+## 2. Steps taken each day - histogram 
 
-## What is mean total number of steps taken per day?
+The histogram shows that the individual often takes between 10,000 and 15,000 steps in a day,
+however, looks skewed towards zero steps
+``` {r fig.width=10, fig.height=6}
+hist(dailyStats$totalSteps)
+```
+
+## 3. Mean/Median Steps taken each day 
+
+On average, this individual takes `r round(mean(dailyStats$totalSteps), digits=0)` steps per day. The median number of steps per day is `r median(dailyStats$totalSteps)`
 
 
+We see that the daily median number of steps equals zero. This may be because many of the readings are taken during times when an individual wouldnt be walking around. For example, not representing only *awake hours*. The five minute intervals start near midnight and register zero for many hours, presumably, while the individual is sleeping.
 
-## What is the average daily activity pattern?
+The table below shows, for each day, the total, average, and median number of steps taken
+
+```{r stepsPerDay, results="asis"}
+print(xtable(dailyStats), type="html", auto=TRUE)
+```
 
 
+## 4. Time Series of Daily activity pattern
 
-## Imputing missing values
+```{r fig.width=10, fig.height=6}
+plot(intervalStats$timeInterval, intervalStats$avgSteps, type="l", ylab="Avg Number of Steps", xlab="5-minute interval in time of day (24 hour)", main="Average steps per 5-min interval across all days")
+```
+
+## 5. The biggest 5-minute interval
+```{r}
+highInterval <- format(intervalStats[intervalStats$avgSteps == max(intervalStats$avgSteps),5], format = "%H:%M AM")
+highAvg <- round(intervalStats[intervalStats$avgSteps == max(intervalStats$avgSteps),2], 0)
+
+```
+The 5-minute interval that has the highest average number of steps starts at `r highInterval` with an average of `r highAvg ` steps. 
+
+## 6. Missing data and imputing values
+
+```{r}
+missingCount <- sum(is.na(activity[,1]))
+```
+
+There are `r missingCount` missing data elements
+
+```{r}
+# Determine how many missing steps there are for each day,
+activity[which(is.na(activity[,1])),4] <- 1
+```
+````{r results="asis"}
+print(xtable(group_by(activity, date) %>% summarize(missing = sum(V4,na.rm = TRUE)) %>% filter(missing >0)), type="html", auto=FALSE)
+```
+This shows the number of missing variables per day. You can see that no day has fewer than 288 missing values (there are 288 five minute increments in a 24-hour period). Therefore, if there is a missing value it is for the entire day. This could mean that the device was not worn on those days or there is some other day-related phenomenon. The strategy for handling these missing value could be to simply ignore those days. Alternatively (and because it is explicitly outlined in the assignment), we will impute values for those five minute increments each day. 
+
+This imputed values for each five-minute interval will be the median number of steps for that interval period across all days without NA
+
+```{r}
+# merge the interval median values to the original activity dataset
+i_activity <- merge(activity, intervalStats[,1:3], all=FALSE)
+
+# replace observations where step is NA with the median for that interval...
+i_activity[is.na(i_activity$steps),]$steps <- i_activity[is.na(i_activity$steps),]$medianSteps
+
+# transform imputed data to summarize by day and interval...
+i_dailyStats <- group_by(i_activity, date) %>% summarize(avgSteps = mean(steps,na.rm=TRUE), medianSteps = median(steps,na.rm=TRUE), totalSteps = sum(steps,na.rm=TRUE))
+
+```
+
+## 7. Histogram with imputed values
+
+The histogram for imputed values looks nearly the same as the histogram on data without.
+
+```{r fig.width=10, fig.height=6}
+hist(i_dailyStats$totalSteps, xlab="Total Daily Steps", main="Histogram of Daily Total Steps")
+i_avgStepsDaily <- round(mean(dailyStats$totalSteps), digits=0)
+i_medianStepsDaily <- median(dailyStats$totalSteps)
+```
+
+Additionally, the median total steps taken each day is the same between the two datasets, at: `r i_medianStepsDaily `. This is expected since the imputed values are the medians. The average number of daily steps, however, works out to be slightly higher (by 150 steps, or 1.6% more) at: `r i_avgStepsDaily`
+
+Imputing the missing data makes little difference to the statistics and estimated daily steps. My recommendation is to remove the missing days from the analysis where possible.
+
+## 8 Weekdays vs. Weekends
 
 
+```{r fig.width=10, fig.height=6}
+# Add a weekend or weekday indicator to the activity data with imputed values...
+i_activity$WE <- sapply(i_activity$date, function(x) if(weekdays(as.Date(x), abbreviate = TRUE) == "Sat" | weekdays(as.Date(x), abbreviate = TRUE) == "Sun") "Weekend" else "Weekday")
 
-## Are there differences in activity patterns between weekdays and weekends?
+# group by weekend indicator and intervals...
+i_intervalStats <- group_by(i_activity, WE, interval) %>% summarize(avgSteps = mean(steps,na.rm=TRUE), medianSteps = median(steps,na.rm=TRUE), totalSteps = sum(steps,na.rm=TRUE))
+
+# two facet chart...
+ggplot(i_intervalStats, aes(interval, avgSteps)) + geom_line(size=1.1, color="Blue") + geom_point(size=1, shape=21, color="DarkBlue", bg="LightBlue") + facet_grid(WE ~ .) + ggtitle("Average Steps per 5-min Interval") + theme_bw() + theme(strip.background = element_rect(fill="indianred"), panel.grid.minor.y = element_line(colour="pink"), panel.grid.major.y = element_line(colour="pink"), panel.grid.major.x = element_line(colour="pink"), panel.grid.minor.x = element_blank())
+```
+
+The End
+=======
