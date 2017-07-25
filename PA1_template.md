@@ -1,6 +1,6 @@
 # Reproducible Research: Peer Assessment 1
 Mike Wehinger  
-November 2016  
+July 2017  
 
 ## 1. Loading and processing the data
 The data will be stored in a dataframe called, *activity* and has 17,568 observations from a personal activity monitoring device. 
@@ -53,7 +53,7 @@ head(dailyStats)
 ```
 
 ```
-## # A tibble: 6 × 4
+## # A tibble: 6 x 4
 ##         date avgSteps medianSteps totalSteps
 ##       <fctr>    <dbl>       <dbl>      <int>
 ## 1 2012-10-01      NaN          NA          0
@@ -88,7 +88,7 @@ however, looks skewed towards zero steps
 hist(dailyStats$totalSteps)
 ```
 
-![](PA1_template_files/figure-html/unnamed-chunk-1-1.png)
+![](PA1_template_files/figure-html/unnamed-chunk-1-1.png)<!-- -->
 
 ## 3. Mean/Median Steps taken each day 
 
@@ -104,8 +104,8 @@ The table below shows, for each day, the total, average, and median number of st
 print(xtable(dailyStats), type="html", auto=TRUE)
 ```
 
-<!-- html table generated in R 3.2.3 by xtable 1.8-2 package -->
-<!-- Sat Nov 12 21:42:19 2016 -->
+<!-- html table generated in R 3.4.1 by xtable 1.8-2 package -->
+<!-- Tue Jul 25 21:10:24 2017 -->
 <table border=1>
 <tr> <th>  </th> <th> date </th> <th> avgSteps </th> <th> medianSteps </th> <th> totalSteps </th>  </tr>
   <tr> <td align="right"> 1 </td> <td> 2012-10-01 </td> <td align="right">  </td> <td align="right">  </td> <td align="right">   0 </td> </tr>
@@ -179,7 +179,7 @@ print(xtable(dailyStats), type="html", auto=TRUE)
 plot(intervalStats$timeInterval, intervalStats$avgSteps, type="l", ylab="Avg Number of Steps", xlab="5-minute interval in time of day (24 hour)", main="Average steps per 5-min interval across all days")
 ```
 
-![](PA1_template_files/figure-html/unnamed-chunk-2-1.png)
+![](PA1_template_files/figure-html/unnamed-chunk-2-1.png)<!-- -->
 
 ## 5. The biggest 5-minute interval
 
@@ -208,8 +208,8 @@ activity[which(is.na(activity[,1])),4] <- 1
 print(xtable(group_by(activity, date) %>% summarize(missing = sum(V4,na.rm = TRUE)) %>% filter(missing >0)), type="html", auto=FALSE)
 ```
 
-<!-- html table generated in R 3.2.3 by xtable 1.8-2 package -->
-<!-- Sat Nov 12 21:42:19 2016 -->
+<!-- html table generated in R 3.4.1 by xtable 1.8-2 package -->
+<!-- Tue Jul 25 21:10:25 2017 -->
 <table border=1>
 <tr> <th>  </th> <th> date </th> <th> missing </th>  </tr>
   <tr> <td align="right"> 1 </td> <td> 2012-10-01 </td> <td align="right"> 288.00 </td> </tr>
@@ -246,7 +246,7 @@ The histogram for imputed values looks nearly the same as the histogram on data 
 hist(i_dailyStats$totalSteps, xlab="Total Daily Steps", main="Histogram of Daily Total Steps")
 ```
 
-![](PA1_template_files/figure-html/unnamed-chunk-8-1.png)
+![](PA1_template_files/figure-html/unnamed-chunk-8-1.png)<!-- -->
 
 ```r
 i_avgStepsDaily <- round(mean(dailyStats$totalSteps), digits=0)
@@ -272,7 +272,7 @@ i_intervalStats <- group_by(i_activity, WE, interval) %>% summarize(avgSteps = m
 ggplot(i_intervalStats, aes(interval, avgSteps)) + geom_line(size=1.1, color="Blue") + geom_point(size=1, shape=21, color="DarkBlue", bg="LightBlue") + facet_grid(WE ~ .) + ggtitle("Average Steps per 5-min Interval") + theme_bw() + theme(strip.background = element_rect(fill="indianred"), panel.grid.minor.y = element_line(colour="pink"), panel.grid.major.y = element_line(colour="pink"), panel.grid.major.x = element_line(colour="pink"), panel.grid.minor.x = element_blank())
 ```
 
-![](PA1_template_files/figure-html/unnamed-chunk-9-1.png)
+![](PA1_template_files/figure-html/unnamed-chunk-9-1.png)<!-- -->
 
 The End
 =======
